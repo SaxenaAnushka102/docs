@@ -1,0 +1,72 @@
+name: Sync Docs from Source
+
+on:
+  repository_dispatch:
+    types: [update-docs]
+  workflow_dispatch: # manual trigger
+
+jobs:
+  sync-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout docs repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up environment
+        id: setup
+        run: |
+          SOURCE_REF="${{ github.event.client_payload.source_ref }}"
+          SOURCE_REPO="${{ github.event.client_payload.source_repo }}"
+          DEST_DIR=""
+          
+          if [[ "$SOURCE_REF" == "main" ]]; then
+            DEST_DIR="docs/dev"
+            DOC_TYPE="dev"
+          elif [[ "$SOURCE_REF" =~ -rc[0-9]+$ ]]; then
+            # Preview release
+            MINOR=$(echo "$SOURCE_REF" | sed -E 's/([0-9]+\.[0-9]+)\..*/\1/')
+            DEST_DIR="versioned_docs/version-${MINOR}-preview"
+            DOC_TYPE="preview"
+          else
+            # Stable release
+            MINOR=$(echo "$SOURCE_REF" | sed -E 's/([0-9]+\.[0-9]+)\..*/\1/')
+            DEST_DIR="versioned_docs/version-${MINOR}"
+            DOC_TYPE="stable"
+          fi
+
+          echo "DEST_DIR=$DEST_DIR" >> $GITHUB_ENV
+          echo "DOC_TYPE=$DOC_TYPE" >> $GITHUB_ENV
+          echo "SOURCE_REF=$SOURCE_REF" >> $GITHUB_ENV
+          echo "SOURCE_REPO=$SOURCE_REPO" >> $GITHUB_ENV
+
+      - name: Clone source repo
+        run: |
+          git clone --depth 1 --branch "$SOURCE_REF" "$SOURCE_REPO" source_repo
+
+      - name: Import and transform markdown files
+        run: bash ./scripts/import_docs.sh "$SOURCE_REF" "$DEST_DIR"
+
+      - name: Update versioned sidebars and metadata
+        run: |
+          if [[ "$DOC_TYPE" != "dev" ]]; then
+            # Add to versions.json if not already present
+            if ! grep -q "\"${SOURCE_REF}\"" versions.json; then
+              jq ". |= [\"${SOURCE_REF}\"] + ." versions.json > tmp.$$.json && mv tmp.$$.json versions.json
+            fi
+          fi
+
+      - name: Commit and create PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "docs: update ${DOC_TYPE} docs for ${SOURCE_REF}"
+          branch: "auto/docs-${SOURCE_REF}"
+          title: "Update ${DOC_TYPE} docs for ${SOURCE_REF}"
+          body: |
+            Automated documentation import for:
+            - Source: ${SOURCE_REPO}
+            - Ref: ${SOURCE_REF}
+            - Type: ${DOC_TYPE}
+          labels: ["automation", "docs"]
