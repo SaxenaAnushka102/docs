@@ -7,7 +7,7 @@ on:
         description: "Version: main | 1.28.0 | 1.28.0-rc1"
         required: true
       dest:
-        description: "Destination folder"
+        description: "Destination folder (inside repo)"
         required: true
         default: "versioned_docs/dev"
 
@@ -20,16 +20,47 @@ jobs:
       pull-requests: write
 
     steps:
+      # -----------------------------
+      # CHECKOUT
+      # -----------------------------
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   
 
-      - run: chmod +x import_docs.sh
+      # -----------------------------
+      # RUN IMPORT SCRIPT
+      # -----------------------------
+      - name: Make script executable
+        run: chmod +x import_docs.sh
 
       - name: Import docs
-        run: ./import_docs.sh "${{ github.event.inputs.version }}" "${{ github.event.inputs.dest }}"
+        run: |
+          ./import_docs.sh "${{ github.event.inputs.version }}" "${{ github.event.inputs.dest }}"
 
+      # -----------------------------
+      # SHOW CHANGES
+      # -----------------------------
+      - name: Debug git status
+        run: |
+          echo "==== GIT STATUS AFTER IMPORT ===="
+          git status
+          echo "==== LISTING DEST FOLDER ===="
+          ls -R "${{ github.event.inputs.dest }}"
+
+      # -----------------------------
+      # ADD & COMMIT CHANGES
+      # -----------------------------
+      - name: Stage changes
+        run: |
+          git add -A
+          echo "==== GIT STATUS AFTER ADD ===="
+          git status
+
+      # -----------------------------
+      # CREATE PR
+      # -----------------------------
       - name: Create PR
         uses: peter-evans/create-pull-request@v6
         with:
-          branch: "manual-${{ github.event.inputs.version }}"
-          commit-message: "docs: manual import for ${{ github.event.inputs.version }}"
-          title: "Manual docs import: ${{ github.event.inputs.version }}"
+          branch: "manual-import/${{ github.event.inputs.version }}"
+          commit-message: "
