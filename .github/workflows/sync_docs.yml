@@ -1,0 +1,43 @@
+name: Auto-Sync Docs
+
+on:
+  repository_dispatch:
+    types: [main_merge, new_release]
+  push:
+    branches: [main]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: chmod +x import_docs.sh
+
+      - name: Determine version
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+            RAW="${{ github.event.client_payload.tag_name }}"
+            CLEAN=$(echo "$RAW" | sed 's/^v//')
+            echo "VERSION=$CLEAN" >> $GITHUB_OUTPUT
+
+            MINOR=$(echo "$CLEAN" | cut -d'.' -f1,2)
+            echo "DEST=versioned_docs/$MINOR" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=main" >> $GITHUB_OUTPUT
+            echo "DEST=versioned_docs/dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run import script
+        run: ./import_docs.sh "${{ steps.vars.outputs.VERSION }}" "${{ steps.vars.outputs.DEST }}"
+
+      - name: Commit & push
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "docs: sync for version ${{ steps.vars.outputs.VERSION }}"
