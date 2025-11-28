@@ -1,0 +1,35 @@
+name: Manual Docs Import
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version: main | 1.28.0 | 1.28.0-rc1"
+        required: true
+      dest:
+        description: "Destination folder"
+        required: true
+        default: "versioned_docs/dev"
+
+jobs:
+  manual:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: chmod +x import_docs.sh
+
+      - name: Import docs
+        run: ./import_docs.sh "${{ github.event.inputs.version }}" "${{ github.event.inputs.dest }}"
+
+      - name: Create PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: "manual-${{ github.event.inputs.version }}"
+          commit-message: "docs: manual import for ${{ github.event.inputs.version }}"
+          title: "Manual docs import: ${{ github.event.inputs.version }}"
