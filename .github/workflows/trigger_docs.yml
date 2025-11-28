@@ -63,4 +63,5 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           branch: "manual-import/${{ github.event.inputs.version }}"
-          commit-message: "
+          commit-message: "docs: manual import for ${{ github.event.inputs.version }}"
+          title: "Manual docs import: ${{ github.event.inputs.version }}"
