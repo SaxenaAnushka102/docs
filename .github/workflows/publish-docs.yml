@@ -1,0 +1,73 @@
+name: Deploy Docusaurus to GitHub Pages
+
+# This workflow triggers when changes are pushed to the main branch 
+# or can be run manually via workflow_dispatch.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    # Only run the deployment job if documentation files change
+    paths:
+      - 'docs/**'
+      - 'versioned_docs/**'
+      - 'versioned_sidebars/**'
+      - 'docusaurus.config.ts'
+      - 'package.json'
+      - 'yarn.lock'
+
+# Prevents parallel deployments
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+# Grant necessary permissions for Pages deployment actions
+permissions:
+  contents: read
+  pages: write     
+  id-token: write  
+
+jobs:
+  build:
+    name: Build Site Artifact
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch full history for Docusaurus plugins
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'yarn'
+          cache-dependency-path: 'yarn.lock' 
+
+      # Configure GitHub Pages environment settings
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Install Dependencies
+        run: yarn install --frozen-lockfile --non-interactive
+
+      - name: Build Docusaurus Website
+        run: yarn build
+
+      # Upload the 'build' directory as an artifact
+      - name: Upload Artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: build # Docusaurus default output directory
+
+  deploy:
+    name: Deploy to GitHub Pages
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
