@@ -24,8 +24,8 @@ concurrency:
 # Grant necessary permissions for Pages deployment actions
 permissions:
   contents: read
-  pages: write     
-  id-token: write  
+  pages: write     # Required for the deploy-pages action
+  id-token: write  # Required for the deploy-pages action
 
 jobs:
   build:
@@ -47,10 +47,15 @@ jobs:
       # Configure GitHub Pages environment settings
       - name: Setup Pages
         uses: actions/configure-pages@v5
-
+        with:
+          # IMPORTANT: Set enablement to 'enabled' to ensure GitHub Pages is activated
+          # and configured to use the GitHub Actions source, resolving the "Not Found" error.
+          enablement: enabled
+          
       - name: Install Dependencies
         run: yarn install --frozen-lockfile --non-interactive
 
+      # The build runs in the root directory since docusaurus.config.ts is there.
       - name: Build Docusaurus Website
         run: yarn build
 
