@@ -3,6 +3,12 @@ name: Import CloudNativePG Docs
 on:
   repository_dispatch:
     types: [cnpg-docs-release]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'The tag of the CloudNativePG release to import docs for'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -10,47 +16,19 @@ permissions:
 jobs:
   import:
     runs-on: ubuntu-latest
-
+    env:
+      VERSION: ${{ github.event.client_payload.tag || github.event.inputs.tag }}
     steps:
-      # -----------------------------
-      # CHECKOUT CNPG DOCS REPO
-      # -----------------------------
       - name: Checkout docs repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'yarn'
-
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-
-      # -----------------------------
-      # RUN IMPORT SCRIPT
-      # -----------------------------
+          token: '${{ secrets.REPO_PAT }}'
       - name: Import docs
-        env:
-          VERSION: ${{ github.event.client_payload.tag }}
         run: |
-          echo "Importing CloudNativePG docs for version: $VERSION"
-          ./scripts/import_docs.sh "$VERSION"
-
-      # -----------------------------
-      # COMMIT CHANGES
-      # -----------------------------
-      - name: Commit changes
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add .
-          git commit -m "docs: import CloudNativePG $VERSION" || echo "No changes to commit"
-
-      # -----------------------------
-      # PUSH CHANGES
-      # -----------------------------
-      - name: Push changes
-        run: git push
+          echo "Importing CloudNativePG docs for version: ${VERSION}"
+          ./scripts/import_docs.sh "${VERSION}"
+      - name: Commit and push changes
+        uses: EndBug/add-and-commit@290ea2c423ad77ca9c62ae0f5b224379612c0321 # v10
+        with:
+          message: "docs: import CloudNativePG ${{ env.VERSION }}"

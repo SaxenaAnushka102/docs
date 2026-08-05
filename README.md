@@ -1,4 +1,4 @@
-[![CloudNativePG](./logo/cloudnativepg.png)](https://cloudnative-pg.io/)
+[![CloudNativePG](./website/logo/cloudnativepg.png)](https://cloudnative-pg.io/)
 
 # CloudNativePG Documentation
 
@@ -39,6 +39,8 @@ This website is built using [Docusaurus](https://docusaurus.io/), a modern stati
 
 ## Installation
 
+Enter the `website` folder, then run:
+
 ```bash
 yarn
 ```
@@ -60,6 +62,20 @@ yarn build
 
 This command generates static content into the `build` directory and can be
 served using any static contents hosting service.
+
+## Testing Production Features
+
+Some features, like redirects, only work in production builds and are not
+available during local development (`yarn start`). To test these features
+locally:
+
+```bash
+yarn build
+yarn serve
+```
+
+This builds the site and serves it locally, allowing you to test production-only
+features.
 
 ## Deployment
 

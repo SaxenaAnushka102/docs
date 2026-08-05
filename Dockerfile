@@ -1,8 +1,6 @@
-FROM node:lts-trixie-slim
+FROM node:lts-alpine@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43
 
-RUN apt update && \
-    apt install -y git && \
-    git clone https://github.com/cloudnative-pg/docs /website
+COPY website /website
 
 WORKDIR /website
 RUN yarn
